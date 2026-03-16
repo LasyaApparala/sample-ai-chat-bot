@@ -37,7 +37,10 @@ app.add_middleware(
 )
 
 BASE_DIR     = os.path.dirname(os.path.abspath(__file__))
+# Works both locally (backend/../frontend) and on Render (repo root/frontend)
 FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "..", "frontend"))
+if not os.path.exists(FRONTEND_DIR):
+    FRONTEND_DIR = os.path.abspath(os.path.join(BASE_DIR, "../../frontend"))
 
 
 # ── Pydantic models ────────────────────────────────────────────────────────

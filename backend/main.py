@@ -22,6 +22,7 @@ from pydantic import BaseModel, EmailStr
 from pymongo.errors import DuplicateKeyError
 
 from chat import get_chat_response
+from voice import get_voice_response
 from auth import hash_password, verify_password, create_token, get_current_user
 from database import (
     create_user, get_user_by_username, get_user_by_email,
@@ -57,6 +58,10 @@ class LoginRequest(BaseModel):
 class ChatRequest(BaseModel):
     session_id: str
     message: str
+
+class VoiceRequest(BaseModel):
+    message: str
+    history: list[dict] = []
 
 
 # ── Auth routes ────────────────────────────────────────────────────────────
@@ -101,6 +106,16 @@ def load_session(session_id: str, username: str = Depends(get_current_user)):
 def remove_session(session_id: str, username: str = Depends(get_current_user)):
     delete_session(session_id, username)
     return {"status": "deleted"}
+
+
+@app.post("/voice")
+def voice(req: VoiceRequest, username: str = Depends(get_current_user)):
+    """Voice assistant endpoint — returns human-like short response + optional lang switch."""
+    try:
+        result = get_voice_response(req.message, req.history)
+        return result
+    except Exception as e:
+        raise HTTPException(500, str(e))
 
 
 @app.post("/chat")

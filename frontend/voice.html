@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Voice Assistant — NovaCognix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/voice.css"/>
+</head>
+<body>
+  <div class="va-app">
+
+    <!-- Sidebar -->
+    <aside class="va-sidebar">
+      <div class="sidebar-logo">
+        <div class="logo-icon">✦</div>
+        <span>NovaCognix</span>
+      </div>
+      <a href="/" class="va-nav-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        New Chat
+      </a>
+      <div class="va-nav-btn active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        Voice Assistant
+      </div>
+
+      <div class="sidebar-section-label">Voice History</div>
+      <div class="va-history" id="vaHistory"></div>
+
+      <div class="va-sidebar-footer">
+        <div class="user-info">
+          <span class="user-avatar" id="userAvatar">U</span>
+          <span id="usernameLabel"></span>
+        </div>
+        <button class="logout-btn" onclick="logout()">Sign out</button>
+        <div class="model-badge"><span class="model-dot"></span>LLaMA 3.3 · 70B</div>
+      </div>
+    </aside>
+
+    <!-- Main voice area -->
+    <main class="va-main">
+
+      <!-- Top bar -->
+      <div class="va-topbar">
+        <div class="va-timer" id="vaTimer">00:00</div>
+        <div class="va-lang-pill" id="vaLangPill">🌐 Auto-detect</div>
+      </div>
+
+      <!-- Orb area -->
+      <div class="va-center">
+        <div class="va-orb-container">
+          <div class="va-orb" id="vaOrb">
+            <div class="orb-gloss"></div>
+            <div class="orb-shine"></div>
+          </div>
+          <div class="va-wave-ring" id="waveRing">
+            <span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="va-label" id="vaLabel">Nova</div>
+        <div class="va-sublabel" id="vaSublabel">Tap to start speaking</div>
+
+        <!-- Live transcript bubble -->
+        <div class="va-bubble" id="vaBubble"></div>
+      </div>
+
+      <!-- Conversation transcript -->
+      <div class="va-transcript-panel" id="vaTranscriptPanel">
+        <div class="va-transcript-title">Conversation</div>
+        <div class="va-transcript-list" id="vaTranscriptList"></div>
+      </div>
+
+      <!-- Controls -->
+      <div class="va-controls">
+        <button class="va-mic-btn" id="vaMicBtn">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+            <line x1="8" y1="23" x2="16" y2="23"/>
+          </svg>
+        </button>
+        <button class="va-end-btn" id="vaEndBtn">End</button>
+      </div>
+
+    </main>
+  </div>
+
+  <script src="/static/voice-page.js"></script>
+</body>
+</html>

@@ -152,6 +152,11 @@ def chat(req: ChatRequest, username: str = Depends(get_current_user)):
 def health():
     return {"status": "ok"}
 
+@app.get("/voice-assistant")
+def serve_voice_page():
+    return FileResponse(os.path.join(FRONTEND_DIR, "voice.html"))
+
+
 @app.get("/")
 def serve_frontend():
     return FileResponse(os.path.join(FRONTEND_DIR, "index.html"))

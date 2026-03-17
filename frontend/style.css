@@ -521,7 +521,7 @@ textarea::placeholder { color: var(--text-muted); }
   gap: 8px;
   padding: 10px 14px;
   background: linear-gradient(135deg, rgba(124,106,247,0.15), rgba(167,139,250,0.1));
-  border: 1px solid rgba(124,106,247,0.3);
+  border: 1px solid rgba(124,106,247,0.35);
   border-radius: 10px;
   color: var(--accent2);
   font-size: 13.5px;
@@ -529,6 +529,8 @@ textarea::placeholder { color: var(--text-muted); }
   cursor: pointer;
   transition: all 0.2s;
   font-family: inherit;
+  width: 100%;
+  text-align: left;
 }
 .voice-btn:hover {
   background: linear-gradient(135deg, rgba(124,106,247,0.3), rgba(167,139,250,0.2));

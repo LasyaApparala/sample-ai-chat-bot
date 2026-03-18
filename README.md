@@ -1,44 +1,40 @@
-# AI Chatbot
+# NovaCognix — AI Chatbot & Voice Assistant
 
-A fully functional AI chatbot powered by **OpenAI GPT-4o** for response generation and **HuggingFace Sentence Transformers** for semantic context retrieval. It features a clean, dark-themed chat UI served directly from the backend.
+A full-stack AI assistant with text chat and a multilingual voice assistant, powered by **Groq LLaMA 3.3 70B**, **HuggingFace Sentence Transformers**, and **MongoDB Atlas**. Users can register, log in, chat, and speak to Nova in 12 languages with adjustable voice settings.
+
+---
+
+## Features
+
+- User authentication (register/login) with JWT tokens
+- Persistent chat history per user stored in MongoDB Atlas
+- Semantic context retrieval using HuggingFace `all-MiniLM-L6-v2` for high accuracy
+- Dedicated voice assistant page with animated floating orb
+- 12 language support with voice picker, speed and pitch controls
+- Auto language detection — say "switch to Spanish" mid-conversation
+- Clean dark UI with sidebar, suggestion chips, and conversation transcript
 
 ---
 
 ## Architecture
 
 ```
-User Browser
-     │
-     │  HTTP (REST)
-     ▼
-┌─────────────────────────────────────┐
-│         FastAPI Backend             │
-│                                     │
-│  main.py  ──►  chat.py              │
-│                   │                 │
-│                   ├──► embeddings.py│
-│                   │    (HuggingFace │
-│                   │  Sentence       │
-│                   │  Transformers)  │
-│                   │                 │
-│                   └──► OpenAI API   │
-│                        (GPT-4o)     │
-└─────────────────────────────────────┘
-     │
-     │  Serves static files
-     ▼
-┌─────────────────────────────────────┐
-│         Frontend (Static)           │
-│  index.html + style.css + app.js    │
-└─────────────────────────────────────┘
+Browser
+  │
+  ├── Text Chat  ──► POST /chat         ──► chat.py  ──► embeddings.py (HuggingFace)
+  │                                                  └──► Groq LLaMA 3.3 70B
+  │
+  ├── Voice Page ──► POST /voice        ──► voice.py ──► Groq LLaMA 3.3 70B
+  │   (Web Speech API STT + TTS)
+  │
+  └── Auth       ──► POST /auth/register
+                 ──► POST /auth/login
+                          └──► auth.py ──► MongoDB Atlas (users collection)
+
+MongoDB Atlas (SAMPLE_AI_BOT)
+  ├── users    — username, email, hashed_password, created_at
+  └── sessions — session_id, user_id, title, messages[], timestamps
 ```
-
-### How it achieves high accuracy
-
-1. The user sends a message along with the full conversation history.
-2. `embeddings.py` uses the `all-MiniLM-L6-v2` Sentence Transformer model to compute semantic similarity between the new query and all past messages.
-3. Only the most relevant past messages (top 6 by cosine similarity) are selected as context — not just the last N messages. This avoids irrelevant context polluting the prompt.
-4. The focused context + system prompt + user message is sent to **GPT-4o** with a low temperature (0.3) for precise, factual answers.
 
 ---
 
@@ -47,146 +43,152 @@ User Browser
 ```
 ai-chatbot/
 ├── backend/
-│   ├── main.py          # FastAPI app — routes, CORS, static file serving
-│   ├── chat.py          # Core logic: builds prompt, calls OpenAI
-│   ├── embeddings.py    # HuggingFace Sentence Transformer — semantic retrieval
-│   └── requirements.txt # Python dependencies
+│   ├── main.py           # FastAPI app — all routes, auth middleware, static serving
+│   ├── chat.py           # Text chat — semantic retrieval + Groq LLaMA
+│   ├── voice.py          # Voice assistant — human-like, multilingual responses
+│   ├── embeddings.py     # HuggingFace Sentence Transformer — picks relevant history
+│   ├── auth.py           # JWT creation/verification, bcrypt password hashing
+│   ├── database.py       # MongoDB Atlas — users + sessions CRUD
+│   ├── .python-version   # Pins Python 3.11 for Render deployment
+│   └── requirements.txt
 ├── frontend/
-│   ├── index.html       # Chat UI markup
-│   ├── style.css        # Dark-themed responsive styles
-│   └── app.js           # Fetch API calls, message rendering, history management
-├── .env.example         # Template for environment variables
-├── .gitignore           # Ignores .env, __pycache__, venv, model cache, etc.
-└── README.md            # This file
+│   ├── index.html        # App shell — auth screen + chat UI
+│   ├── style.css         # Dark theme, chat bubbles, auth card, responsive layout
+│   ├── app.js            # Text chat logic, session management, auth flow
+│   ├── voice.html        # Dedicated voice assistant page
+│   ├── voice.css         # Voice page styles — orb, wave rings, settings panel
+│   └── voice-page.js     # Voice assistant logic — STT, API, TTS, settings
+├── render.yaml           # Render deployment config
+├── .env.example          # Environment variable template
+├── .gitignore
+└── README.md
 ```
 
 ---
 
 ## File Explanations
 
-### `backend/main.py`
-The FastAPI entry point. It:
-- Defines `POST /chat` — receives `{ message, history }`, returns `{ reply }`
-- Defines `GET /health` — simple health check
-- Mounts the `frontend/` folder as static files at `/static`
-- Serves `index.html` at the root `/`
+### Backend
 
-### `backend/chat.py`
-The brain of the chatbot. It:
-- Loads the OpenAI client using your API key from `.env`
-- Defines a system prompt that instructs GPT to be accurate and honest
-- Calls `get_relevant_history()` from `embeddings.py` to select the best context
-- Sends the assembled messages to `gpt-4o` with `temperature=0.3` for accuracy
+`main.py` — FastAPI entry point. Defines all routes: auth, chat, voice, sessions. Serves the frontend as static files at `/static`. All chat/voice routes require a valid JWT Bearer token.
 
-### `backend/embeddings.py`
-Handles semantic similarity using HuggingFace. It:
-- Loads `all-MiniLM-L6-v2` — a fast, accurate sentence embedding model
-- Encodes the user query and all history messages into vectors
-- Computes cosine similarity to rank history by relevance
-- Returns the top-k most relevant messages in chronological order
+`chat.py` — Text chat handler. Uses `embeddings.py` to find the most semantically relevant past messages via cosine similarity, then sends a focused prompt to Groq LLaMA 3.3 70B at temperature 0.8 for accurate, factual, creative answers.
 
-### `frontend/index.html`
-The chat UI shell. Contains the header, scrollable message area, and input box with send button.
+`voice.py` — Voice assistant handler. Uses a conversational system prompt tuned for natural, human-like spoken responses (short sentences, no markdown). Temperature 0.7 for more natural speech. Detects language switch commands and returns the new language code to the frontend.
 
-### `frontend/style.css`
-Dark-themed responsive CSS. Styles the chat bubbles (user = indigo, bot = dark card), typing indicator animation, and auto-resizing textarea.
+`embeddings.py` — Loads `all-MiniLM-L6-v2` from HuggingFace. Encodes the user query and all history messages into vectors, ranks by cosine similarity, and returns the top-k most relevant messages as context — ensuring the LLM always gets the most useful history.
 
-### `frontend/app.js`
-All frontend JavaScript. It:
-- Maintains `history[]` array in memory
-- On send: appends user bubble, shows typing indicator, POSTs to `/chat`
-- On response: removes typing indicator, appends bot bubble
-- Supports Enter to send, Shift+Enter for newline, and clear chat button
+`auth.py` — bcrypt password hashing via `passlib`. JWT tokens (72hr expiry) via `python-jose`. `get_current_user` is a FastAPI dependency injected into all protected routes.
+
+`database.py` — MongoDB Atlas connection via `pymongo`. Two collections: `users` (account data with unique indexes on username and email) and `sessions` (full message history per user, sorted by recency).
+
+### Frontend
+
+`index.html` — App shell with two screens: auth (login/register) and chat. Auth state is managed via JWT in `localStorage` for auto-login on return visits.
+
+`style.css` — Full dark theme. Covers auth card, chat bubbles (user = indigo gradient, bot = dark card), sidebar, suggestion chips, typing indicator, and responsive mobile layout.
+
+`app.js` — Text chat frontend. Manages JWT in `localStorage`. Sends messages with a UUID session ID to `/chat`, renders message bubbles, loads sidebar history from `/sessions`, handles auto-login.
+
+`voice.html` — Dedicated voice assistant page at `/voice-assistant`. Contains the sidebar with navigation, animated orb area, live transcript bubble, conversation panel, mic/end controls, and a slide-in settings panel.
+
+`voice.css` — All styles for the voice page. Includes the floating orb animation, expanding wave rings, listening/speaking state transitions (purple → cyan), settings panel slide-in animation, language chips, voice dropdown, and range sliders.
+
+`voice-page.js` — Full voice assistant logic:
+- Web Speech API (`SpeechRecognition`) for speech-to-text
+- POSTs to `/voice` with conversation history
+- `SpeechSynthesis` for text-to-speech with selected voice, rate, and pitch
+- Settings panel: 12 language chips, voice dropdown (auto-populated per language), speed/pitch sliders, test voice button
+- Spoken language switching: say "switch to Hindi" and it updates recognition + TTS instantly
 
 ---
 
-## Setup & Running
+## Setup & Running Locally
 
-### 1. Clone and navigate
-
+### 1. Clone
 ```bash
-git clone <your-repo-url>
-cd ai-chatbot
+git clone https://github.com/LasyaApparala/sample-ai-chat-bot.git
+cd sample-ai-chat-bot/ai-chatbot
 ```
 
-### 2. Set up your API key
-
+### 2. Create `.env`
 ```bash
 cp .env.example .env
 ```
+```
+GROQ_API_KEY=your_groq_api_key
+MONGO_URI=mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/SAMPLE_AI_BOT?retryWrites=true&w=majority
+JWT_SECRET=your-random-secret
+```
+- Free Groq key: [console.groq.com](https://console.groq.com)
+- Free MongoDB Atlas: [cloud.mongodb.com](https://cloud.mongodb.com)
 
-Open `.env` and replace `your_openai_api_key_here` with your actual key from [platform.openai.com](https://platform.openai.com/api-keys).
-
-### 3. Create a Python virtual environment
-
+### 3. Install dependencies
 ```bash
 cd backend
 python -m venv venv
-
-# Windows
-venv\Scripts\activate
-
-# macOS / Linux
-source venv/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
+venv\Scripts\activate        # Windows
+# source venv/bin/activate   # macOS/Linux
 pip install -r requirements.txt
 ```
 
-> The first run will download the `all-MiniLM-L6-v2` model (~90MB) from HuggingFace automatically.
-
-### 5. Run the server
-
+### 4. Run
 ```bash
 uvicorn main:app --reload --port 8000
 ```
 
-### 6. Open the chatbot
+Open [http://localhost:8000](http://localhost:8000)
 
-Visit [http://localhost:8000](http://localhost:8000) in your browser.
+---
+
+## Voice Assistant Usage
+
+1. Log in and click "Voice Assistant" in the sidebar
+2. Click the orb or mic button and speak
+3. Orb pulses purple while listening, shifts cyan while Nova speaks
+4. Click ⚙ (top right) to open the settings panel:
+   - Select from 12 languages
+   - Pick a specific voice from your system
+   - Adjust speed (0.5x–2x) and pitch
+   - Click "Test Voice" to preview
+5. Switch language mid-conversation by saying:
+   - "Switch to Spanish" / "Habla español"
+   - "Speak Hindi" / "Speak Telugu"
+   - "Parle français" / "Speak Japanese"
+
+### Supported Languages
+English · Spanish · French · German · Hindi · Telugu · Tamil · Japanese · Chinese · Arabic · Portuguese · Italian
+
+---
+
+## Deployment on Render
+
+Settings:
+- Language: `Python 3`
+- Root Directory: `backend`
+- Build Command: `pip install -r requirements.txt`
+- Start Command: `uvicorn main:app --host 0.0.0.0 --port $PORT`
+
+Environment variables:
+```
+GROQ_API_KEY
+MONGO_URI
+JWT_SECRET
+```
 
 ---
 
 ## API Reference
 
-### `POST /chat`
-
-**Request body:**
-```json
-{
-  "message": "What is the capital of France?",
-  "history": [
-    { "role": "user", "content": "Hello" },
-    { "role": "assistant", "content": "Hi! How can I help?" }
-  ]
-}
-```
-
-**Response:**
-```json
-{
-  "reply": "The capital of France is Paris."
-}
-```
-
-### `GET /health`
-Returns `{ "status": "ok" }` — useful for uptime checks.
-
----
-
-## Requirements
-
-- Python 3.10+
-- An OpenAI API key with access to `gpt-4o`
-- Internet connection (for OpenAI API calls and initial model download)
-
----
-
-## Notes
-
-- Conversation history is stored in the browser's memory only — it resets on page refresh. For persistence, a database layer (e.g., SQLite or Redis) can be added to `main.py`.
-- The HuggingFace model is cached locally after the first download in `~/.cache/huggingface/`.
-- To use a different OpenAI model (e.g., `gpt-3.5-turbo`), change the `model` parameter in `chat.py`.
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/auth/register` | No | Create account |
+| POST | `/auth/login` | No | Get JWT token |
+| POST | `/chat` | Yes | Send message, get reply (persisted) |
+| POST | `/voice` | Yes | Voice query, get spoken reply |
+| GET | `/sessions` | Yes | List user's chat sessions |
+| GET | `/sessions/{id}` | Yes | Load session messages |
+| DELETE | `/sessions/{id}` | Yes | Delete a session |
+| GET | `/health` | No | Health check |
+| GET | `/` | No | Serve chat UI |
+| GET | `/voice-assistant` | No | Serve voice assistant page |
